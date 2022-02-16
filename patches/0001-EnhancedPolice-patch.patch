@@ -1,0 +1,123 @@
+From dd82b7f297b68633b64b5cd8d9dcfc1df569d04e Mon Sep 17 00:00:00 2001
+From: jekky <11986158+jac3km4@users.noreply.github.com>
+Date: Wed, 16 Feb 2022 21:58:05 +0000
+Subject: [PATCH] EnhancedPolice patch
+
+---
+ EnhancedPolice/EnhancedPoliceSystem.reds   |  2 +-
+ EnhancedPolice/EnhancedPoliceVehicles.reds | 66 +++++++++++-----------
+ 2 files changed, 34 insertions(+), 34 deletions(-)
+
+diff --git a/EnhancedPolice/EnhancedPoliceSystem.reds b/EnhancedPolice/EnhancedPoliceSystem.reds
+index d3b4284..adfabec 100644
+--- a/EnhancedPolice/EnhancedPoliceSystem.reds
++++ b/EnhancedPolice/EnhancedPoliceSystem.reds
+@@ -114,7 +114,7 @@
+         spawnRange.Y = Cast(random_distance * 5);
+         spawnInterval = MaxF(heatData.SpawnInterval(), 0.00);
+         i = 0;
+-        while i < Cast(unitsCount) {
++        while i < Cast<Int32>(unitsCount) {
+           if this.GetCharacterRecordFromPool(characterRecordPool, characterRecord) {
+             ArrayPush(characterRecords, characterRecord);
+           };
+diff --git a/EnhancedPolice/EnhancedPoliceVehicles.reds b/EnhancedPolice/EnhancedPoliceVehicles.reds
+index d4d79ad..6102e30 100644
+--- a/EnhancedPolice/EnhancedPoliceVehicles.reds
++++ b/EnhancedPolice/EnhancedPoliceVehicles.reds
+@@ -93,7 +93,7 @@
+ 
+ /* Fix police spawning in your vehicle */
+ @replaceMethod(PreventionSystem)
+-  private final func IsVehicleValid(vehicle: wref<VehicleObject>, out slotName: CName) -> Bool {
++  private final func IsVehicleValid(vehicle: wref<VehicleObject>) -> Bool {
+     if !IsDefined(vehicle) {
+       return false;
+     };
+@@ -103,9 +103,9 @@
+     if VehicleComponent.GetNumberOfOccupiedSlots(vehicle.GetGame(), vehicle) >= 1 {
+       return false;
+     };
+-    if !VehicleComponent.GetFirstAvailableSlot(vehicle.GetGame(), vehicle, slotName) {
+-      return false;
+-    };
++    // if !VehicleComponent.GetFirstAvailableSlot(vehicle.GetGame(), vehicle, slotName) {
++    //   return false;
++    // };
+     if vehicle.IsPlayerMounted() {
+       return false;
+     };
+@@ -122,41 +122,41 @@
+     if !this.GetVehicleIDFromHeatStage(heatStage, vehicleID) {
+       return ;
+     };
+-    if GameInstance.GetAINavigationSystem(this.GetGameInstance()).GetFurthestNavmeshPointBehind(this.m_player, Cast(random_distance),  random_distance, spawnPosition, -this.m_player.GetWorldForward() * Cast(random_distance), true) {
++    if GameInstance.GetAINavigationSystem(this.GetGameInstance()).GetFurthestNavmeshPointBehind(this.m_player, Cast(random_distance),  random_distance, spawnPosition, -this.m_player.GetWorldForward() * Cast<Float>(random_distance), true) {
+       WorldTransform.SetPosition(spawnTransform, spawnPosition);
+       WorldTransform.SetOrientationFromDir(spawnTransform, this.m_player.GetWorldForward());
+       GameInstance.GetPreventionSpawnSystem(this.GetGameInstance()).RequestSpawn(vehicleID, Cast(EnumInt(heatStage)), spawnTransform);
+     };
+   }
+ 
+-/* Fix police turn on siren */
+-@replaceMethod(PreventionSystem)
+-  private final func MountVehicle(unit: wref<ScriptedPuppet>, vehicle: wref<VehicleObject>) -> Bool {
+-    let evt: ref<MountAIEvent>;
+-    let vehicleObject: wref<VehicleObject>;
+-    let vehicle_out: wref<VehicleObject>;
+-    let mountData: ref<MountEventData>;
+-    let slotName: CName;
+-    if !IsDefined(unit) || !IsDefined(vehicle) {
+-      return false;
+-    };
+-    if !this.IsVehicleValid(vehicle, slotName) {
+-      return false;
+-    };
+-    mountData = new MountEventData();
+-    mountData.slotName = slotName;
+-    mountData.mountParentEntityId = vehicle.GetEntityID();
+-    mountData.isInstant = true;
+-    mountData.ignoreHLS = true;
+-    evt = new MountAIEvent();
+-    evt.name = n"Mount";
+-    evt.data = mountData;
+-    unit.QueueEvent(evt);
+-    if this.IsChasingPlayer() {
+-      vehicle.ToggleSiren(true);
+-    };
+-    return true;
+-  }
++// /* Fix police turn on siren */
++// @replaceMethod(PreventionSystem)
++//   private final func MountVehicle(unit: wref<ScriptedPuppet>, vehicle: wref<VehicleObject>) -> Bool {
++//     let evt: ref<MountAIEvent>;
++//     let vehicleObject: wref<VehicleObject>;
++//     let vehicle_out: wref<VehicleObject>;
++//     let mountData: ref<MountEventData>;
++//     let slotName: CName;
++//     if !IsDefined(unit) || !IsDefined(vehicle) {
++//       return false;
++//     };
++//     if !this.IsVehicleValid(vehicle, slotName) {
++//       return false;
++//     };
++//     mountData = new MountEventData();
++//     mountData.slotName = slotName;
++//     mountData.mountParentEntityId = vehicle.GetEntityID();
++//     mountData.isInstant = true;
++//     mountData.ignoreHLS = true;
++//     evt = new MountAIEvent();
++//     evt.name = n"Mount";
++//     evt.data = mountData;
++//     unit.QueueEvent(evt);
++//     if this.IsChasingPlayer() {
++//       vehicle.ToggleSiren(true);
++//     };
++//     return true;
++//   }
+ 
+ /* Fix not tracking vehicle for a long time */
+ @replaceMethod(PreventionSystem)
+-- 
+2.35.1.windows.2
+

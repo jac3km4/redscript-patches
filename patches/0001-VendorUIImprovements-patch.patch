@@ -1,0 +1,116 @@
+From 4e5f8584e6a0cc9269766ff614e8b0c52bec3713 Mon Sep 17 00:00:00 2001
+From: jekky <11986158+jac3km4@users.noreply.github.com>
+Date: Wed, 16 Feb 2022 22:00:06 +0000
+Subject: [PATCH] VendorUIImprovements patch
+
+---
+ VendorUIImprovements/UiFixes.reds             |  4 +--
+ .../VendorStockAvailability.reds              | 28 +++++++++----------
+ 2 files changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/VendorUIImprovements/UiFixes.reds b/VendorUIImprovements/UiFixes.reds
+index 6335f40..01ab8a8 100644
+--- a/VendorUIImprovements/UiFixes.reds
++++ b/VendorUIImprovements/UiFixes.reds
+@@ -163,7 +163,7 @@ protected cb func OnItemChooserItemChanged(e: ref<ItemChooserItemChanged>) -> Bo
+ }
+ 
+ @wrapMethod(InventoryItemModeLogicController)
+-private final func UpdateAvailableItems(viewMode: ItemViewModes, equipmentAreas: array<gamedataEquipmentArea>) -> Void {
++private final func UpdateAvailableItems(viewMode: ItemViewModes, equipmentAreas: array<gamedataEquipmentArea>, opt tryToPreserveFilter: Bool) -> Void {
+   if VuiMod.Get().OptionInventoryFilterFix {
+     let attachments: array<InventoryItemAttachments>;
+     let attachmentsToCheck: array<TweakDBID>;
+@@ -228,7 +228,7 @@ private final func UpdateAvailableItems(viewMode: ItemViewModes, equipmentAreas:
+       };
+     };
+   } else {
+-    wrappedMethod(viewMode, equipmentAreas);
++    wrappedMethod(viewMode, equipmentAreas, tryToPreserveFilter);
+   }
+ }
+ 
+diff --git a/VendorUIImprovements/VendorStockAvailability.reds b/VendorUIImprovements/VendorStockAvailability.reds
+index d7bd935..c51ff9d 100644
+--- a/VendorUIImprovements/VendorStockAvailability.reds
++++ b/VendorUIImprovements/VendorStockAvailability.reds
+@@ -17,14 +17,14 @@ protected func ShouldRegenerateStock() -> Bool {
+   }
+ }
+ 
+-@wrapMethod(Vendor)
+-public final func GetMaxItemStacksPerVendor() -> Int32 {
+-  if VuiMod.Get().SectionVendorStock {
+-    return VuiMod.Get().CalculateStockAvailability(this); /* VuiMod */
+-  } else {
+-    return wrappedMethod();
+-  }
+-}
++// @wrapMethod(Vendor)
++// public final static func GetMaxItemStacksPerVendor(opt useAlternativeCyberware: Bool) -> Int32 {
++//   if VuiMod.Get().SectionVendorStock {
++//     return VuiMod.Get().CalculateStockAvailability(this); /* VuiMod */
++//   } else {
++//     return wrappedMethod();
++//   }
++// }
+ 
+ @wrapMethod(Vendor)
+ private final func CreateStacksFromVendorItem(vendorItem: wref<VendorItem_Record>, player: ref<PlayerPuppet>) -> array<SItemStack> {
+@@ -97,7 +97,7 @@ private final func InitializeStock() -> Void {
+ 
+     /* VuiMod Start */
+     VuiMod.Get().CalculateVendorMoney(this, player, itemPool, this.m_stock);
+-    continueLoop = ArraySize(this.m_stock) < this.GetMaxItemStacksPerVendor();
++    continueLoop = ArraySize(this.m_stock) < Vendor.GetMaxItemStacksPerVendor();
+     /* VuiMod End */
+ 
+     i = 0;
+@@ -108,7 +108,7 @@ private final func InitializeStock() -> Void {
+       while j < ArraySize(itemStacks) && continueLoop { /* VuiMod */
+         ArrayPush(this.m_stock, itemStacks[j]);
+ 
+-        continueLoop = ArraySize(this.m_stock) < this.GetMaxItemStacksPerVendor(); /* VuiMod */
++        continueLoop = ArraySize(this.m_stock) < Vendor.GetMaxItemStacksPerVendor(); /* VuiMod */
+         j += 1;
+       };
+       i += 1;
+@@ -145,7 +145,7 @@ private final func RegenerateStock() -> Void {
+ 
+     dynamicStock = this.CreateDynamicStockFromPlayerProgression(GetPlayer(this.m_gameInstance));
+     i = 0;
+-    while i < ArraySize(dynamicStock) && ArraySize(newStock) < this.GetMaxItemStacksPerVendor() {
++    while i < ArraySize(dynamicStock) && ArraySize(newStock) < Vendor.GetMaxItemStacksPerVendor() {
+       ArrayPush(newStock, dynamicStock[i]);
+       i += 1;
+     };
+@@ -155,7 +155,7 @@ private final func RegenerateStock() -> Void {
+     VuiMod.Get().CalculateVendorMoney(this, player, itemPool, newStock); /* VuiMod */
+ 
+     itemPoolSize = ArraySize(itemPool);
+-    continueLoop = ArraySize(newStock) < this.GetMaxItemStacksPerVendor();
++    continueLoop = ArraySize(newStock) < Vendor.GetMaxItemStacksPerVendor();
+     circularIndex = RandRange(0, itemPoolSize);
+ 
+     i = 0;
+@@ -169,7 +169,7 @@ private final func RegenerateStock() -> Void {
+         while j < ArraySize(itemStacks) && continueLoop {
+           ArrayPush(newStock, itemStacks[j]);
+ 
+-          continueLoop = ArraySize(newStock) < this.GetMaxItemStacksPerVendor();
++          continueLoop = ArraySize(newStock) < Vendor.GetMaxItemStacksPerVendor();
+           j += 1;
+         };
+       };
+@@ -200,7 +200,7 @@ private final const func PlayerCanBuy(itemStack: script_ref<SItemStack>) -> Bool
+       filterTags = this.m_vendorRecord.VendorFilterTags();
+       itemData = GameInstance.GetTransactionSystem(this.m_gameInstance).GetItemData(this.m_vendorObject, Deref(itemStack).itemID);
+       availablePrereq = vendorItem.AvailabilityPrereq();
+-      Deref(itemStack).requirement = RPGManager.GetStockItemRequirement(vendorItem);
++      Deref(itemStack).requirement = RPGManager.GetStockItemRequirement(this.m_gameInstance, vendorItem, Cast<StatsObjectID>(Deref(itemStack).itemID));
+ 
+       if IsDefined(availablePrereq) {
+         Deref(itemStack).isAvailable = RPGManager.CheckPrereq(availablePrereq, GetPlayer(this.m_gameInstance));
+-- 
+2.35.1.windows.2
+

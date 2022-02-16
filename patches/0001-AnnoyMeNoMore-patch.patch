@@ -1,0 +1,77 @@
+From ff789bf48467eaa343f2de547d6a0a2532a6a091 Mon Sep 17 00:00:00 2001
+From: jekky <11986158+jac3km4@users.noreply.github.com>
+Date: Wed, 16 Feb 2022 21:56:52 +0000
+Subject: [PATCH] AnnoyMeNoMore patch
+
+---
+ AnnoyMeNoMore/disableLandingMovementLock.reds | 22 +++++++++----------
+ AnnoyMeNoMore/disableRelicMalfunctions.reds   |  4 ++--
+ AnnoyMeNoMore/reasonablePolice.reds           |  2 +-
+ 3 files changed, 14 insertions(+), 14 deletions(-)
+
+diff --git a/AnnoyMeNoMore/disableLandingMovementLock.reds b/AnnoyMeNoMore/disableLandingMovementLock.reds
+index 52ba329..0241de6 100644
+--- a/AnnoyMeNoMore/disableLandingMovementLock.reds
++++ b/AnnoyMeNoMore/disableLandingMovementLock.reds
+@@ -1,12 +1,12 @@
+-  @replaceMethod(LocomotionAirDecisions)
+-  protected final const func GetLandingType(const stateContext: ref<StateContext>) -> Int32 {
+-    // return stateContext.GetIntParameter(n"LandingType", true);
++  // @replaceMethod(LocomotionAirDecisions)
++  // protected final const func GetLandingType(const stateContext: ref<StateContext>) -> Int32 {
++  //   // return stateContext.GetIntParameter(n"LandingType", true);
+ 
+-    // BEGIN PATCH
+-    if stateContext.GetIntParameter(n"LandingType", true) == 3 {
+-      return 2;
+-    } else {
+-      return stateContext.GetIntParameter(n"LandingType", true);
+-    };
+-    // END PATCH
+-  }
++  //   // BEGIN PATCH
++  //   if stateContext.GetIntParameter(n"LandingType", true) == 3 {
++  //     return 2;
++  //   } else {
++  //     return stateContext.GetIntParameter(n"LandingType", true);
++  //   };
++  //   // END PATCH
++  // }
+diff --git a/AnnoyMeNoMore/disableRelicMalfunctions.reds b/AnnoyMeNoMore/disableRelicMalfunctions.reds
+index 225692f..d59e880 100644
+--- a/AnnoyMeNoMore/disableRelicMalfunctions.reds
++++ b/AnnoyMeNoMore/disableRelicMalfunctions.reds
+@@ -9,7 +9,7 @@
+         // GameObjectEffectHelper.StartEffectEvent(this, vfxList[i].Name());
+ 
+         // BEGIN PATCH
+-        if !StrStartsWith(ToString(vfxList[i].Name()), "johnny_sickness") {
++        if StrFindFirst(ToString(vfxList[i].Name()), "johnny_sickness") != 0 {
+           GameObjectEffectHelper.StartEffectEvent(this, vfxList[i].Name());
+         };
+         // END PATCH
+@@ -31,7 +31,7 @@
+         // GameObject.PlaySound(this, sfxList[i].Name());
+ 
+         // BEGIN PATCH
+-        if !StrStartsWith(ToString(sfxList[i].Name()), "johnny_sickness") {
++        if StrFindFirst(ToString(sfxList[i].Name()), "johnny_sickness") != 0 {
+           GameObject.PlaySound(this, sfxList[i].Name());
+         };
+         // END PATCH
+diff --git a/AnnoyMeNoMore/reasonablePolice.reds b/AnnoyMeNoMore/reasonablePolice.reds
+index 470c877..1772dc0 100644
+--- a/AnnoyMeNoMore/reasonablePolice.reds
++++ b/AnnoyMeNoMore/reasonablePolice.reds
+@@ -37,7 +37,7 @@
+         spawnRange = heatData.SpawnRange();
+         spawnInterval = MaxF(heatData.SpawnInterval(), 0.00);
+         i = 0;
+-        while i < Cast(unitsCount) {
++        while i < Cast<Int32>(unitsCount) {
+           if this.GetCharacterRecordFromPool(characterRecordPool, characterRecord) {
+             ArrayPush(characterRecords, characterRecord);
+           } else {
+-- 
+2.35.1.windows.2
+

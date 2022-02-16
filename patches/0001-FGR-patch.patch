@@ -1,0 +1,223 @@
+From 82a25ec7cfb913549410d5a7833914d3628dfefc Mon Sep 17 00:00:00 2001
+From: jekky <11986158+jac3km4@users.noreply.github.com>
+Date: Wed, 16 Feb 2022 21:59:05 +0000
+Subject: [PATCH] FGR patch
+
+---
+ FGR/Dismemberment Fix/Dismemberment Fix.reds  |   2 +-
+ .../Monwire Counterattack Fix.reds            | 176 +++++++++---------
+ FGR/Vendors/Vendors.reds                      |   2 +-
+ 3 files changed, 90 insertions(+), 90 deletions(-)
+
+diff --git a/FGR/Dismemberment Fix/Dismemberment Fix.reds b/FGR/Dismemberment Fix/Dismemberment Fix.reds
+index 04d331f..e021faa 100644
+--- a/FGR/Dismemberment Fix/Dismemberment Fix.reds	
++++ b/FGR/Dismemberment Fix/Dismemberment Fix.reds	
+@@ -4,7 +4,7 @@
+ 	if !ScriptedPuppet.IsAlive(this.GetOwner()){ //Dismember dead ppl too
+ 		return true;
+ 	};
+-    if ScriptedPuppet.IsAlive(this.GetOwner()) && !this.GetOwnerNPC().IsAboutToDie() && !this.GetOwnerNPC().IsAboutToBeDefeated() && !ScriptedPuppet.IsDefeated(this.GetOwner()) {
++    if this.m_isAlive && !this.m_ownerNPC.IsAboutToDie() && !this.m_ownerNPC.IsAboutToBeDefeated() && !ScriptedPuppet.IsDefeated(this.GetOwner()) {
+       return false;
+     };
+     if HitShapeUserDataBase.IsHitReactionZoneTorso(this.GetHitShapeUserData()) && AttackData.IsMelee(this.m_attackData.GetAttackType()) {
+diff --git a/FGR/Monowire Counterattack Fix/Monwire Counterattack Fix.reds b/FGR/Monowire Counterattack Fix/Monwire Counterattack Fix.reds
+index 0da3940..32f92b1 100644
+--- a/FGR/Monowire Counterattack Fix/Monwire Counterattack Fix.reds	
++++ b/FGR/Monowire Counterattack Fix/Monwire Counterattack Fix.reds	
+@@ -1,89 +1,89 @@
+-@replaceMethod(MeleeTransition) 
+-   protected final const func GetAttackDataFromStateName(stateContext: ref<StateContext>, scriptInterface: ref<StateGameScriptInterface>, stateName: String, attackNumber: Int32, out outgoingStruct: ref<MeleeAttackData>) -> Bool {
+-    let attackRecord: wref<Attack_Melee_Record>;
+-    let attackSpeed: Float;
+-    let attackSpeedMult: Float;
+-    let dirRecord: wref<AttackDirection_Record>;
+-    let effectToPlay: CName;
+-    let endPos: Vector3;
+-    let ownerID: EntityID;
+-    let recordID: TweakDBID;
+-    let staminaCostMods: array<wref<StatModifier_Record>>;
+-    let startPos: Vector3;
+-    let statsSystem: ref<StatsSystem>;
+-    if !this.GetAttackRecord(scriptInterface, stateName, attackNumber, attackRecord) {
+-		recordID = t"FistsAttacks.FistsDeflectAttack";
+-    };
+-    recordID = attackRecord.GetID();
++// @replaceMethod(MeleeTransition) 
++//    protected final const func GetAttackDataFromStateName(stateContext: ref<StateContext>, scriptInterface: ref<StateGameScriptInterface>, stateName: String, attackNumber: Int32, out outgoingStruct: ref<MeleeAttackData>) -> Bool {
++//     let attackRecord: wref<Attack_Melee_Record>;
++//     let attackSpeed: Float;
++//     let attackSpeedMult: Float;
++//     let dirRecord: wref<AttackDirection_Record>;
++//     let effectToPlay: CName;
++//     let endPos: Vector3;
++//     let ownerID: EntityID;
++//     let recordID: TweakDBID;
++//     let staminaCostMods: array<wref<StatModifier_Record>>;
++//     let startPos: Vector3;
++//     let statsSystem: ref<StatsSystem>;
++//     if !this.GetAttackRecord(scriptInterface, stateName, attackNumber, attackRecord) {
++// 		recordID = t"FistsAttacks.FistsDeflectAttack";
++//     };
++//     recordID = attackRecord.GetID();
+ 
+-    if !TDBID.IsValid(recordID) {
+-		recordID = t"FistsAttacks.FistsDeflectAttack";
+-      //return false;
+-    };
+-    attackSpeedMult = 1.00;
+-    outgoingStruct = new MeleeAttackData();
+-    ownerID = scriptInterface.ownerEntityID;
+-    statsSystem = scriptInterface.GetStatsSystem();
+-    if TDB.GetBool(recordID + t".dontScaleWithAttackSpeed") {
+-      attackSpeed = 1.00;
+-    } else {
+-      attackSpeed = statsSystem.GetStatValue(Cast(scriptInterface.ownerEntityID), gamedataStatType.AttackSpeed);
+-      if scriptInterface.HasStatFlag(gamedataStatType.CanMeleeBerserk) {
+-        attackSpeedMult *= LerpF(Cast<Float>(stateContext.GetIntParameter(n"totalMeleeAttacksInCombo", true)) / Cast<Float>(this.GetStaticIntParameterDefault("maxBerserkASAttack", 1)), 1.00, this.GetStaticFloatParameterDefault("maxBerserkAS", 1.00), true);
+-      };
+-      if this.IsPlayerExhausted(scriptInterface) {
+-        attackSpeedMult *= this.GetStaticFloatParameterDefault("lowStaminaAttackSpeedMult", 0.60);
+-      };
+-      attackSpeed *= attackSpeedMult;
+-    };
+-    attackRecord.StaminaCost(staminaCostMods);
+-    outgoingStruct.staminaCost = RPGManager.CalculateStatModifiers(staminaCostMods, scriptInterface.GetGame(), scriptInterface.owner, Cast(ownerID));
+-    outgoingStruct.chargeCost = TDB.GetFloat(recordID + t".chargeCost");
+-    outgoingStruct.attackName = attackRecord.AttackName();
+-    outgoingStruct.attackSpeed = attackSpeed;
+-    outgoingStruct.startupDuration = TDB.GetFloat(recordID + t".startupDuration") / attackSpeed;
+-    outgoingStruct.activeDuration = TDB.GetFloat(recordID + t".activeDuration");
+-    outgoingStruct.recoverDuration = TDB.GetFloat(recordID + t".recoverDuration") / attackSpeed;
+-    outgoingStruct.activeHitDuration = TDB.GetFloat(recordID + t".activeHitDuration");
+-    outgoingStruct.recoverHitDuration = TDB.GetFloat(recordID + t".recoverHitDuration") / attackSpeed;
+-    outgoingStruct.attackWindowOpen = TDB.GetFloat(recordID + t".attackWindowOpen");
+-    outgoingStruct.attackWindowClosed = TDB.GetFloat(recordID + t".attackWindowClosed");
+-    outgoingStruct.idleTransitionTime = TDB.GetFloat(recordID + t".idleTransitionTime") / attackSpeed;
+-    outgoingStruct.holdTransitionTime = TDB.GetFloat(recordID + t".holdTransitionTime");
+-    outgoingStruct.blockTransitionTime = TDB.GetFloat(recordID + t".blockTransitionTime");
+-    outgoingStruct.attackEffectDuration = TDB.GetFloat(recordID + t".attackEffectDuration");
+-    outgoingStruct.impactFxSlot = TDB.GetCName(recordID + t".impactFxSlot");
+-    outgoingStruct.attackEffectDelay = TDB.GetFloat(recordID + t".attackEffectDelay");
+-    if outgoingStruct.startupDuration > 0.00 {
+-      outgoingStruct.attackEffectDelay -= TDB.GetFloat(recordID + t".startupDuration");
+-      outgoingStruct.attackEffectDelay += outgoingStruct.startupDuration;
+-    };
+-    outgoingStruct.impulseDelay = TDB.GetFloat(recordID + t".impulseDelay");
+-    outgoingStruct.cameraSpaceImpulse = TDB.GetFloat(recordID + t".cameraSpaceImpulse");
+-    outgoingStruct.forwardImpulse = TDB.GetFloat(recordID + t".forwardImpulse");
+-    outgoingStruct.upImpulse = TDB.GetFloat(recordID + t".upImpulse");
+-    outgoingStruct.useAdjustmentInsteadOfImpulse = TDB.GetBool(recordID + t".useAdjustmentInsteadOfImpulse");
+-    outgoingStruct.attackWindowOpen = ClampF(outgoingStruct.attackWindowOpen, outgoingStruct.startupDuration, outgoingStruct.activeDuration);
+-    outgoingStruct.attackWindowClosed = outgoingStruct.attackWindowClosed / attackSpeed;
+-    outgoingStruct.attackWindowClosed = ClampF(outgoingStruct.attackWindowClosed, outgoingStruct.startupDuration + outgoingStruct.activeDuration, outgoingStruct.idleTransitionTime);
+-    outgoingStruct.enableAdjustingPlayerPositionToTarget = TDB.GetBool(recordID + t".enableAdjustingPlayerPositionToTarget");
+-    outgoingStruct.incrementsCombo = TDB.GetBool(recordID + t".incrementsCombo");
+-    outgoingStruct.standUpDelay = TDB.GetFloat(recordID + t".standUpDelay");
+-    outgoingStruct.ikOffset = TDB.GetVector3(recordID + t".ikOffset");
+-    dirRecord = attackRecord.AttackDirection();
+-    startPos = dirRecord.StartPosition();
+-    endPos = dirRecord.EndPosition();
+-    outgoingStruct.startPosition = new Vector4(startPos.X, startPos.Y, startPos.Z, 0.00);
+-    outgoingStruct.endPosition = new Vector4(endPos.X, endPos.Y, endPos.Z, 0.00);
+-    outgoingStruct.hasDeflectAnim = TDB.GetBool(recordID + t".hasDeflectAnim");
+-    outgoingStruct.hasHitAnim = TDB.GetBool(recordID + t".hasHitAnim");
+-    outgoingStruct.trailStartDelay = TweakDBInterface.GetFloat(recordID + t".trailStartDelay", 0.10);
+-    outgoingStruct.trailStopDelay = TweakDBInterface.GetFloat(recordID + t".trailStopDelay", 0.50);
+-    outgoingStruct.trailAttackSide = TDB.GetString(recordID + t".trailAttackSide");
+-    MeleeTransition.GetWeaponObject(scriptInterface).SetAttack(recordID);
+-    stateContext.SetPermanentFloatParameter(n"idleTransitionTime", outgoingStruct.idleTransitionTime, true);
+-    stateContext.SetPermanentFloatParameter(n"attackSpeed", attackSpeed, true);
+-    effectToPlay = TDB.GetCName(recordID + t".vfxName");
+-    GameObjectEffectHelper.StartEffectEvent(scriptInterface.owner, effectToPlay, false);
+-    return true;
+-  }
+\ No newline at end of file
++//     if !TDBID.IsValid(recordID) {
++// 		recordID = t"FistsAttacks.FistsDeflectAttack";
++//       //return false;
++//     };
++//     attackSpeedMult = 1.00;
++//     outgoingStruct = new MeleeAttackData();
++//     ownerID = scriptInterface.ownerEntityID;
++//     statsSystem = scriptInterface.GetStatsSystem();
++//     if TDB.GetBool(recordID + t".dontScaleWithAttackSpeed") {
++//       attackSpeed = 1.00;
++//     } else {
++//       attackSpeed = statsSystem.GetStatValue(Cast(scriptInterface.ownerEntityID), gamedataStatType.AttackSpeed);
++//       if scriptInterface.HasStatFlag(gamedataStatType.CanMeleeBerserk) {
++//         attackSpeedMult *= LerpF(Cast<Float>(stateContext.GetIntParameter(n"totalMeleeAttacksInCombo", true)) / Cast<Float>(this.GetStaticIntParameterDefault("maxBerserkASAttack", 1)), 1.00, this.GetStaticFloatParameterDefault("maxBerserkAS", 1.00), true);
++//       };
++//       if this.IsPlayerExhausted(scriptInterface) {
++//         attackSpeedMult *= this.GetStaticFloatParameterDefault("lowStaminaAttackSpeedMult", 0.60);
++//       };
++//       attackSpeed *= attackSpeedMult;
++//     };
++//     attackRecord.StaminaCost(staminaCostMods);
++//     outgoingStruct.staminaCost = RPGManager.CalculateStatModifiers(staminaCostMods, scriptInterface.GetGame(), scriptInterface.owner, Cast(ownerID));
++//     outgoingStruct.chargeCost = TDB.GetFloat(recordID + t".chargeCost");
++//     outgoingStruct.attackName = attackRecord.AttackName();
++//     outgoingStruct.attackSpeed = attackSpeed;
++//     outgoingStruct.startupDuration = TDB.GetFloat(recordID + t".startupDuration") / attackSpeed;
++//     outgoingStruct.activeDuration = TDB.GetFloat(recordID + t".activeDuration");
++//     outgoingStruct.recoverDuration = TDB.GetFloat(recordID + t".recoverDuration") / attackSpeed;
++//     outgoingStruct.activeHitDuration = TDB.GetFloat(recordID + t".activeHitDuration");
++//     outgoingStruct.recoverHitDuration = TDB.GetFloat(recordID + t".recoverHitDuration") / attackSpeed;
++//     outgoingStruct.attackWindowOpen = TDB.GetFloat(recordID + t".attackWindowOpen");
++//     outgoingStruct.attackWindowClosed = TDB.GetFloat(recordID + t".attackWindowClosed");
++//     outgoingStruct.idleTransitionTime = TDB.GetFloat(recordID + t".idleTransitionTime") / attackSpeed;
++//     outgoingStruct.holdTransitionTime = TDB.GetFloat(recordID + t".holdTransitionTime");
++//     outgoingStruct.blockTransitionTime = TDB.GetFloat(recordID + t".blockTransitionTime");
++//     outgoingStruct.attackEffectDuration = TDB.GetFloat(recordID + t".attackEffectDuration");
++//     outgoingStruct.impactFxSlot = TDB.GetCName(recordID + t".impactFxSlot");
++//     outgoingStruct.attackEffectDelay = TDB.GetFloat(recordID + t".attackEffectDelay");
++//     if outgoingStruct.startupDuration > 0.00 {
++//       outgoingStruct.attackEffectDelay -= TDB.GetFloat(recordID + t".startupDuration");
++//       outgoingStruct.attackEffectDelay += outgoingStruct.startupDuration;
++//     };
++//     outgoingStruct.impulseDelay = TDB.GetFloat(recordID + t".impulseDelay");
++//     outgoingStruct.cameraSpaceImpulse = TDB.GetFloat(recordID + t".cameraSpaceImpulse");
++//     outgoingStruct.forwardImpulse = TDB.GetFloat(recordID + t".forwardImpulse");
++//     outgoingStruct.upImpulse = TDB.GetFloat(recordID + t".upImpulse");
++//     outgoingStruct.useAdjustmentInsteadOfImpulse = TDB.GetBool(recordID + t".useAdjustmentInsteadOfImpulse");
++//     outgoingStruct.attackWindowOpen = ClampF(outgoingStruct.attackWindowOpen, outgoingStruct.startupDuration, outgoingStruct.activeDuration);
++//     outgoingStruct.attackWindowClosed = outgoingStruct.attackWindowClosed / attackSpeed;
++//     outgoingStruct.attackWindowClosed = ClampF(outgoingStruct.attackWindowClosed, outgoingStruct.startupDuration + outgoingStruct.activeDuration, outgoingStruct.idleTransitionTime);
++//     outgoingStruct.enableAdjustingPlayerPositionToTarget = TDB.GetBool(recordID + t".enableAdjustingPlayerPositionToTarget");
++//     outgoingStruct.incrementsCombo = TDB.GetBool(recordID + t".incrementsCombo");
++//     outgoingStruct.standUpDelay = TDB.GetFloat(recordID + t".standUpDelay");
++//     outgoingStruct.ikOffset = TDB.GetVector3(recordID + t".ikOffset");
++//     dirRecord = attackRecord.AttackDirection();
++//     startPos = dirRecord.StartPosition();
++//     endPos = dirRecord.EndPosition();
++//     outgoingStruct.startPosition = new Vector4(startPos.X, startPos.Y, startPos.Z, 0.00);
++//     outgoingStruct.endPosition = new Vector4(endPos.X, endPos.Y, endPos.Z, 0.00);
++//     outgoingStruct.hasDeflectAnim = TDB.GetBool(recordID + t".hasDeflectAnim");
++//     outgoingStruct.hasHitAnim = TDB.GetBool(recordID + t".hasHitAnim");
++//     outgoingStruct.trailStartDelay = TweakDBInterface.GetFloat(recordID + t".trailStartDelay", 0.10);
++//     outgoingStruct.trailStopDelay = TweakDBInterface.GetFloat(recordID + t".trailStopDelay", 0.50);
++//     outgoingStruct.trailAttackSide = TDB.GetString(recordID + t".trailAttackSide");
++//     MeleeTransition.GetWeaponObject(scriptInterface).SetAttack(recordID);
++//     stateContext.SetPermanentFloatParameter(n"idleTransitionTime", outgoingStruct.idleTransitionTime, true);
++//     stateContext.SetPermanentFloatParameter(n"attackSpeed", attackSpeed, true);
++//     effectToPlay = TDB.GetCName(recordID + t".vfxName");
++//     GameObjectEffectHelper.StartEffectEvent(scriptInterface.owner, effectToPlay, false);
++//     return true;
++//   }
+\ No newline at end of file
+diff --git a/FGR/Vendors/Vendors.reds b/FGR/Vendors/Vendors.reds
+index eeb2ef2..010cbac 100644
+--- a/FGR/Vendors/Vendors.reds
++++ b/FGR/Vendors/Vendors.reds
+@@ -1,6 +1,6 @@
+ //Uncap their inventories
+ @replaceMethod(Vendor)
+-  public final func GetMaxItemStacksPerVendor() -> Int32 {
++  public final static func GetMaxItemStacksPerVendor(opt useAlternativeCyberware: Bool) -> Int32 {
+     return 99999;
+   }
+ 
+-- 
+2.35.1.windows.2
+

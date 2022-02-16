@@ -1,0 +1,194 @@
+From a61fe56f8a1a1874ce8506cb72e7cffe81bd8614 Mon Sep 17 00:00:00 2001
+From: jekky <11986158+jac3km4@users.noreply.github.com>
+Date: Wed, 16 Feb 2022 22:00:54 +0000
+Subject: [PATCH] KiroshiOpticals patch
+
+---
+ backgroundScanner/main.reds | 97 +++++++++++++++++++++----------------
+ 1 file changed, 54 insertions(+), 43 deletions(-)
+
+diff --git a/backgroundScanner/main.reds b/backgroundScanner/main.reds
+index 87901e2..33ba127 100644
+--- a/backgroundScanner/main.reds
++++ b/backgroundScanner/main.reds
+@@ -59,7 +59,7 @@ public func GetCrowdArchetype(appearanceName: String) -> String {
+ }
+ 
+ @replaceMethod(NPCPuppet)
+-public const func CompileScannerChunks() -> Bool {
++  public const func CompileScannerChunks() -> Bool {
+     let NPCName: String;
+     let abilities: array<wref<GameplayAbility_Record>>;
+     let abilityChunk: ref<ScannerAbilities>;
+@@ -71,6 +71,7 @@ public const func CompileScannerChunks() -> Bool {
+     let attitudeChunk: ref<ScannerAttitude>;
+     let availablePlayerActions: array<TweakDBID>;
+     let basicWeaponChunk: ref<ScannerWeaponBasic>;
++    let bounty: Bounty;
+     let bountyChunk: ref<ScannerBountySystem>;
+     let bountyUI: BountyUI;
+     let choices: array<InteractionChoice>;
+@@ -93,14 +94,21 @@ public const func CompileScannerChunks() -> Bool {
+     let rarityChunk: ref<ScannerRarity>;
+     let resistancesChunk: ref<ScannerResistances>;
+     let resists: array<ScannerStatDetails>;
++    let scannerBlackboard: wref<IBlackboard>;
+     let statPoolSystem: ref<StatPoolsSystem>;
+     let vulnerabilitiesChunk: ref<ScannerVulnerabilities>;
+     let vulnerability: Vulnerability;
+     let z: Int32;
++    let ps: ref<ScriptedPuppetPS> = this.GetPS();
+     let characterRecord: ref<Character_Record> = TweakDBInterface.GetCharacterRecord(this.GetRecordID());
+     let scannerPreset: ref<ScannerModuleVisibilityPreset_Record> = characterRecord.ScannerModulePreset();
+     let thisEntity: ref<GameObject> = EntityGameInterface.GetEntity(this.GetEntity()) as GameObject;
+-    let scannerBlackboard: wref<IBlackboard> = GameInstance.GetBlackboardSystem(this.GetGame()).Get(GetAllBlackboardDefs().UI_ScannerModules);
++    if TDBID.IsValid(ps.GetForcedScannerPreset()) {
++      scannerPreset = TweakDBInterface.GetScannerModuleVisibilityPresetRecord(ps.GetForcedScannerPreset());
++    } else {
++      scannerPreset = characterRecord.ScannerModulePreset();
++    };
++    scannerBlackboard = GameInstance.GetBlackboardSystem(this.GetGame()).Get(GetAllBlackboardDefs().UI_ScannerModules);
+     if !IsDefined(characterRecord) || !IsDefined(scannerPreset) || !IsDefined(scannerBlackboard) {
+       return false;
+     };
+@@ -112,7 +120,7 @@ public const func CompileScannerChunks() -> Bool {
+         nameChunk.SetArchetype(true);
+       };
+       nameParams = new inkTextParams();
+-      if (this.GetPS() as ScriptedPuppetPS).HasAlternativeName() {
++      if ps.HasAlternativeName() {
+         if IsNameValid(characterRecord.AlternativeFullDisplayName()) {
+           NPCName = LocKeyToString(characterRecord.AlternativeFullDisplayName());
+         } else {
+@@ -167,7 +175,7 @@ public const func CompileScannerChunks() -> Bool {
+     };
+     if scannerPreset.ShouldShowRarity() {
+       rarityChunk = new ScannerRarity();
+-      hasLinkToDB = GameInstance.GetStatsSystem(this.GetGame()).GetStatValue(Cast(GetPlayer(this.GetGame()).GetEntityID()), gamedataStatType.HasLinkToBountySystem) > 0.00;
++      hasLinkToDB = GameInstance.GetStatsSystem(this.GetGame()).GetStatValue(Cast<StatsObjectID>(GetPlayer(this.GetGame()).GetEntityID()), gamedataStatType.HasLinkToBountySystem) > 0.00;
+       rarityChunk.Set(this.GetPuppetRarity().Type(), this.IsCharacterCivilian() && hasLinkToDB);
+       scannerBlackboard.SetVariant(GetAllBlackboardDefs().UI_ScannerModules.ScannerRarity, ToVariant(rarityChunk));
+     };
+@@ -185,45 +193,49 @@ public const func CompileScannerChunks() -> Bool {
+       healthChunk = new ScannerHealth();
+       statPoolSystem = GameInstance.GetStatPoolsSystem(this.GetGame());
+       if IsDefined(statPoolSystem) {
+-        healthChunk.Set(Cast(statPoolSystem.GetStatPoolValue(Cast(this.GetEntityID()), gamedataStatPoolType.Health, false)), Cast(GameInstance.GetStatPoolsSystem(this.GetGame()).GetStatPoolMaxPointValue(Cast(this.GetEntityID()), gamedataStatPoolType.Health)));
++        healthChunk.Set(Cast<Int32>(statPoolSystem.GetStatPoolValue(Cast<StatsObjectID>(this.GetEntityID()), gamedataStatPoolType.Health, false)), Cast<Int32>(GameInstance.GetStatPoolsSystem(this.GetGame()).GetStatPoolMaxPointValue(Cast<StatsObjectID>(this.GetEntityID()), gamedataStatPoolType.Health)));
+         scannerBlackboard.SetVariant(GetAllBlackboardDefs().UI_ScannerModules.ScannerHealth, ToVariant(healthChunk));
+       };
+     };
+-    if scannerPreset.ShouldShowBounty() && TDBID.IsValid(this.GetRecord().BountyDrawTable().GetID()) {
++    if scannerPreset.ShouldShowBounty() && TDBID.IsValid(this.GetRecord().BountyDrawTable().GetID()) && !this.m_bounty.m_filteredOut {
+       if ArraySize(this.m_bounty.m_transgressions) <= 0 {
+-        BountyManager.GenerateBounty(this);
+-      };
+-      bountyChunk = new ScannerBountySystem();
+-      bountyUI.issuedBy = LocKeyToString(TweakDBInterface.GetAffiliationRecord(this.m_bounty.m_bountySetter).LocalizedName());
+-      bountyUI.moneyReward = this.m_bounty.m_moneyAmount;
+-      bountyUI.streetCredReward = this.m_bounty.m_streetCredAmount;
+-      enemyDifficulty = RPGManager.CalculatePowerDifferential(thisEntity);
+-      switch enemyDifficulty {
+-        case EPowerDifferential.TRASH:
+-          bountyUI.level = 1;
+-          break;
+-        case EPowerDifferential.EASY:
+-          bountyUI.level = 2;
+-          break;
+-        case EPowerDifferential.NORMAL:
+-          bountyUI.level = 3;
+-          break;
+-        case EPowerDifferential.HARD:
+-          bountyUI.level = 4;
+-          break;
+-        case EPowerDifferential.IMPOSSIBLE:
+-          bountyUI.level = 5;
+-          break;
+-        default:
++        bounty = BountyManager.GenerateBounty(this);
++      } else {
++        bounty = this.m_bounty;
+       };
+-      bountyUI.hasAccess = GameInstance.GetStatsSystem(this.GetGame()).GetStatValue(Cast(GetPlayer(this.GetGame()).GetEntityID()), gamedataStatType.HasLinkToBountySystem) > 0.00;
+-      i = 0;
+-      while i < ArraySize(this.m_bounty.m_transgressions) {
+-        ArrayPush(bountyUI.transgressions, TweakDBInterface.GetTransgressionRecord(this.m_bounty.m_transgressions[i]).LocalizedDescription());
+-        i += 1;
++      if !bounty.m_filteredOut {
++        bountyChunk = new ScannerBountySystem();
++        bountyUI.issuedBy = LocKeyToString(TweakDBInterface.GetAffiliationRecord(bounty.m_bountySetter).LocalizedName());
++        bountyUI.moneyReward = bounty.m_moneyAmount;
++        bountyUI.streetCredReward = bounty.m_streetCredAmount;
++        enemyDifficulty = RPGManager.CalculatePowerDifferential(thisEntity);
++        switch enemyDifficulty {
++          case EPowerDifferential.TRASH:
++            bountyUI.level = 1;
++            break;
++          case EPowerDifferential.EASY:
++            bountyUI.level = 2;
++            break;
++          case EPowerDifferential.NORMAL:
++            bountyUI.level = 3;
++            break;
++          case EPowerDifferential.HARD:
++            bountyUI.level = 4;
++            break;
++          case EPowerDifferential.IMPOSSIBLE:
++            bountyUI.level = 5;
++            break;
++          default:
++        };
++        bountyUI.hasAccess = GameInstance.GetStatsSystem(this.GetGame()).GetStatValue(Cast<StatsObjectID>(GetPlayer(this.GetGame()).GetEntityID()), gamedataStatType.HasLinkToBountySystem) > 0.00;
++        i = 0;
++        while i < ArraySize(bounty.m_transgressions) {
++          ArrayPush(bountyUI.transgressions, TweakDBInterface.GetTransgressionRecord(bounty.m_transgressions[i]).LocalizedDescription());
++          i += 1;
++        };
++        bountyChunk.Set(bountyUI);
++        scannerBlackboard.SetVariant(GetAllBlackboardDefs().UI_ScannerModules.ScannerBountySystem, ToVariant(bountyChunk));
+       };
+-      bountyChunk.Set(bountyUI);
+-      scannerBlackboard.SetVariant(GetAllBlackboardDefs().UI_ScannerModules.ScannerBountySystem, ToVariant(bountyChunk));
+     };
+     if !this.IsDead() && !ScriptedPuppet.IsDefeated(this) && scannerPreset.ShouldShowWeaponData() {
+       AIActionTransactionSystem.CalculateEquipmentItems(this, this.GetRecord().PrimaryEquipment(), items, -1);
+@@ -240,23 +252,22 @@ public const func CompileScannerChunks() -> Bool {
+     if !this.IsDead() && !ScriptedPuppet.IsDefeated(this) && scannerPreset.ShouldShowVulnerabilities() {
+       vulnerabilitiesChunk = new ScannerVulnerabilities();
+       availablePlayerActions = RPGManager.GetPlayerQuickHackList(GetPlayer(this.GetGame()));
+-      context = (this.GetPS() as ScriptedPuppetPS).GenerateContext(gamedeviceRequestType.Remote, Device.GetInteractionClearance(), Device.GetPlayerMainObjectStatic(this.GetGame()), this.GetEntityID());
++      context = ps.GenerateContext(gamedeviceRequestType.Remote, Device.GetInteractionClearance(), Device.GetPlayerMainObjectStatic(this.GetGame()), this.GetEntityID());
+       ArrayResize(quickHackActionRecords, ArraySize(availablePlayerActions));
+       i = 0;
+       while i < ArraySize(availablePlayerActions) {
+         quickHackActionRecords[i] = TweakDBInterface.GetObjectActionRecord(availablePlayerActions[i]);
+         i += 1;
+       };
+-      (this.GetPS() as ScriptedPuppetPS).GetValidChoices(quickHackActionRecords, context, null, false, choices);
++      ps.GetValidChoices(quickHackActionRecords, context, null, false, choices);
+       i = 0;
+       while i < ArraySize(choices) {
+         k = 0;
+         while k < ArraySize(choices[i].data) {
+-          let v: ref<ScriptableDeviceAction> = FromVariant(choices[i].data[k]);
+-          puppetQuickHack = v.GetObjectActionRecord();
++          puppetQuickHack = FromVariant<ref<ScriptableDeviceAction>>(choices[i].data[k]).GetObjectActionRecord();
+           if IsDefined(puppetQuickHack) {
+             vulnerability.vulnerabilityName = puppetQuickHack.ObjectActionUI().Caption();
+-            vulnerability.icon = puppetQuickHack.ObjectActionUI().CaptionIcon().EnumName();
++            vulnerability.icon = puppetQuickHack.ObjectActionUI().CaptionIcon().TexturePartID().GetID();
+             z = 0;
+             while z < ArraySize(quickHackActionRecords) {
+               if quickHackActionRecords[z].GameplayCategory().GetID() == puppetQuickHack.GetID() {
+@@ -276,7 +287,7 @@ public const func CompileScannerChunks() -> Bool {
+     };
+     if scannerPreset.ShouldShowNetworkStatus() {
+       networkStatusChunk = new ScannerNetworkStatus();
+-      ap = (this.GetPS() as ScriptedPuppetPS).GetAccessPoint();
++      ap = ps.GetAccessPoint();
+       if IsDefined(ap) {
+         if ap.IsBreached() {
+           networkStatusChunk.Set(ScannerNetworkState.BREACHED);
+-- 
+2.35.1.windows.2
+
